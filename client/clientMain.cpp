@@ -22,5 +22,6 @@ int main() {
     //RUN_TEST0(testUDPClient);
     //RUN_TEST2(testResolveDNS, "", "www.baidu.com", "a");
     //RUN_TEST1(testHttpClient, "", "www.baidu.com");
-    RUN_TEST1(testSendMail, "", "smtp.163.com");
+    //RUN_TEST1(testSendMail, "", "smtp.163.com");
+    RUN_TEST1(testSendMailWithAttachment, "", "smtp.163.com");
 }

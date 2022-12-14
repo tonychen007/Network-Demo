@@ -87,8 +87,8 @@ void sendMail0(const char* hostname, const char* port, int isAttachment = 0, int
     sendFormat(clientSocket, "AUTH LOGIN\r\n");
     waitOnResponse(clientSocket, 334);
 
-    const char* username = "username1";
-    const char* password = "password1";
+    const char* username = "xx@xx.com";
+    const char* password = "xxxx";
     char* p1 = base64_encode((unsigned char*)username, strlen(username));
     char* p2 = base64_encode((unsigned char*)password, strlen(password));
 
@@ -98,43 +98,122 @@ void sendMail0(const char* hostname, const char* port, int isAttachment = 0, int
     waitOnResponse(clientSocket, 235);
 
     // send info
-    const char* sender = "sender@xxx.com";
+    const char* sender = "xx@xx.com";
     sendFormat(clientSocket, "MAIL FROM:<%s>\r\n", sender);
     waitOnResponse(clientSocket, 250);
 
-    const char* recipient = "rect@xxx.com";
+    // to,cc,bcc all in here
+    const char* recipient = "xx@xx.com";
+    // to
+    sendFormat(clientSocket, "RCPT TO:<%s>\r\n", sender);
+    waitOnResponse(clientSocket, 250);
     sendFormat(clientSocket, "RCPT TO:<%s>\r\n", recipient);
     waitOnResponse(clientSocket, 250);
+    // cc
+    sendFormat(clientSocket, "RCPT TO:<%s>\r\n", recipient);
+    waitOnResponse(clientSocket, 250);
+    sendFormat(clientSocket, "RCPT TO:<%s>\r\n", recipient);
+    waitOnResponse(clientSocket, 250);
+    // bcc
+    sendFormat(clientSocket, "RCPT TO:<%s>\r\n", recipient);
+    waitOnResponse(clientSocket, 250);
+    sendFormat(clientSocket, "RCPT TO:<%s>\r\n", recipient);
+    waitOnResponse(clientSocket, 250);
+
     sendFormat(clientSocket, "DATA\r\n");
     waitOnResponse(clientSocket, 354);
 
+    // header
     const char* subject = "Test title";
-    sendFormat(clientSocket, "From:%s\r\n", "Tony Chen");
-    sendFormat(clientSocket, "To:%s\r\n", recipient);
+    sendFormat(clientSocket, "From:%s\r\n", "Tony Chen<lxx@xx.com>");
+    sendFormat(clientSocket, "To:%s\r\n", "tony1<xx@xx.com>,tony2<xx@xx.com>");
+    sendFormat(clientSocket, "Cc:%s\r\n", "tony3<xx@xx.com>,tony4<xx@xx.com>");
+    sendFormat(clientSocket, "Bcc:%s\r\n", "tony5<xx@xx.com>,tony6<xx@xx.com>");
     sendFormat(clientSocket, "Subject:%s\r\n", subject);
-    const char* body = "<h1>Hi Tony:</h1>\n\n<div style=\"color:red\">Welcome to our pary.</div>\nHave a good time.\n\nYours Sincerely,\nTom.";
+    const char* body = "<h1>Hi Tony:</h1>\n\n<div style=\"color:red\">Welcome to our pary.</div>\n<p>Have a good time.</p><p>Yours Sincerely,</p><p>Tom.</p>";
     
     char SendBuf[BUFFER_SIZE] = { '\0' };
     
     strcat_s(SendBuf, "MIME-Version: 1.0\r\n");
+    if (isAttachment) {
+        strcat_s(SendBuf, "Content-Type: multipart/mixed; boundary=\"");
+        strcat_s(SendBuf, BOUNDARY_TEXT);
+        strcat_s(SendBuf, "\"\r\n");
+        strcat_s(SendBuf, "\r\n");
+        strcat_s(SendBuf, "--");
+        strcat_s(SendBuf, BOUNDARY_TEXT);
+        strcat_s(SendBuf, "\r\n");
+    }
     if (isHTML)
-        strcat_s(SendBuf, "Content-type: text/html; charset=");
+        strcat_s(SendBuf, "Content-type: text/html; charset=UTF-8\r\n");
     else
-        strcat_s(SendBuf, "Content-type: text/plain; charset=");
-    strcat_s(SendBuf, "UTF-8");
-    strcat_s(SendBuf, "\r\n");
+        strcat_s(SendBuf, "Content-type: text/plain; charset=UTF-8\r\n");
     strcat_s(SendBuf, "Content-Transfer-Encoding: 7bit\r\n");
     strcat_s(SendBuf, "\r\n");
     sendFormat(clientSocket, "%s", SendBuf);
-
     sendFormat(clientSocket, "%s\r\n", body);
-    // !!! IMPORTANT, DO NOT FORGET send "."
-    sendFormat(clientSocket, "%s\r\n", ".");
 
     if (isAttachment) {
+        char szFileName[512] = { '\0' };
+        const char* attach = "1.jpg";
+        strcat_s(szFileName, "=?UTF-8?B?");
+        p1 = base64_encode((unsigned char*)attach, strlen(attach));
+        strcat_s(szFileName, p1);
+        strcat_s(szFileName, "?=");
 
+        snprintf(SendBuf, BUFFER_SIZE, "--%s\r\n", BOUNDARY_TEXT);
+        strcat_s(SendBuf, "Content-Type: application/x-msdownload; name=\"");
+        strcat_s(SendBuf, szFileName);
+        strcat_s(SendBuf, "\"\r\n");
+        strcat_s(SendBuf, "Content-Transfer-Encoding: base64\r\n");
+        strcat_s(SendBuf, "Content-Disposition: attachment; filename=\"");
+        strcat_s(SendBuf, szFileName);
+        strcat_s(SendBuf, "\"\r\n");
+        strcat_s(SendBuf, "\r\n");
+        sendFormat(clientSocket, "%s", SendBuf);
+
+        // read file
+        int bb = 55;
+        FILE* f;
+        unsigned char* fileBuf = (unsigned char*)malloc(bb);
+        fopen_s(&f, attach, "rb");
+        unsigned int fileSize = 0;
+        unsigned int res = 0;
+        unsigned long part = 0;
+        if (f != NULL) {
+            // get file size:
+            fseek(f, 0, SEEK_END);
+            fileSize = ftell(f);
+            fseek(f, 0, SEEK_SET);
+        }
+        for (int i = 0; i < fileSize / (bb - 1) + 1; i++) {
+            res = fread(fileBuf, sizeof(char), (bb - 1), f);
+            char* pb64 = base64_encode(fileBuf, res);
+            if (part == 0) {
+                strcpy_s(SendBuf, pb64);
+            }
+            else {
+                strcat_s(SendBuf, pb64);
+            }
+            strcat_s(SendBuf, "\r\n");
+            part += res + 2;
+            if (part >= BUFFER_SIZE / 2) {
+                part = 0;
+                sendFormat(clientSocket, "%s", SendBuf);
+            }
+        }
+        if (part) {
+            sendFormat(clientSocket, "%s", SendBuf);
+        }
+        fclose(f);
+        f = NULL;
+
+        snprintf(SendBuf, BUFFER_SIZE, "\r\n--%s--\r\n", BOUNDARY_TEXT);
+        sendFormat(clientSocket, "%s", SendBuf);
     }
 
+    // !!! IMPORTANT, DO NOT FORGET send "."
+    sendFormat(clientSocket, "%s","\r\n.\r\n");
     waitOnResponse(clientSocket, 250);
     sendFormat(clientSocket, "QUIT\r\n");
     waitOnResponse(clientSocket, 221);
@@ -143,8 +222,6 @@ void sendMail0(const char* hostname, const char* port, int isAttachment = 0, int
 void testSendMail(const char* hostname, const char* port) {
     INIT_SOCK;
 
-    sendMail0(hostname, port);
-    Sleep(3000);
     sendMail0(hostname, port, 0, 1);
 
     DESTORY_SOCK;
@@ -153,8 +230,6 @@ void testSendMail(const char* hostname, const char* port) {
 void testSendMailWithAttachment(const char* hostname, const char* port) {
     INIT_SOCK;
 
-    sendMail0(hostname, port);
-    Sleep(3000);
     sendMail0(hostname, port, 1, 1);
 
     DESTORY_SOCK;
