@@ -87,8 +87,8 @@ void sendMail0(const char* hostname, const char* port, int isAttachment = 0, int
     sendFormat(clientSocket, "AUTH LOGIN\r\n");
     waitOnResponse(clientSocket, 334);
 
-    const char* username = "username";
-    const char* password = "password";
+    const char* username = "username1";
+    const char* password = "password1";
     char* p1 = base64_encode((unsigned char*)username, strlen(username));
     char* p2 = base64_encode((unsigned char*)password, strlen(password));
 
