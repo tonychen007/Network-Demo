@@ -118,12 +118,15 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>..\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>iphlpapi.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <StackReserveSize>1342177280</StackReserveSize>
+      <StackCommitSize>1342177280</StackCommitSize>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -153,7 +156,7 @@
     <ClCompile Include="04UDPClient.cpp" />
     <ClCompile Include="05queryDNS.cpp" />
     <ClCompile Include="06httpClient.cpp" />
-    <ClCompile Include="08mailSend.cpp" />
+    <ClCompile Include="08mailSendRecv.cpp" />
     <ClCompile Include="clientMain.cpp" />
     <ClCompile Include="01simpleWinsock.cpp" />
   </ItemGroup>

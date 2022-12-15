@@ -58,3 +58,4 @@ void testHttpClient(const char* url);
 void testHttpServer();
 void testSendMail(const char* hostname, const char* port = "25");
 void testSendMailWithAttachment(const char* hostname, const char* port = "25");
+void testRecvMail(const char* hostname, const char* port = "110");

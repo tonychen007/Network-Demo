@@ -39,7 +39,7 @@
     <ClCompile Include="06httpClient.cpp">
       <Filter>來源檔案</Filter>
     </ClCompile>
-    <ClCompile Include="08mailSend.cpp">
+    <ClCompile Include="08mailSendRecv.cpp">
       <Filter>來源檔案</Filter>
     </ClCompile>
     <ClCompile Include="..\common\base64.c">
