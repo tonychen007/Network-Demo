@@ -9,17 +9,19 @@
 using namespace std;
 
 #define MAXINPUT 512
+#define BOUNDARY_TEXT "__MESSAGE__ID__1"
+#define DELM "\r\n"
 
 const int MAXRESPONSE = 4096;
 const int BUFFER_SIZE = 4096;
-const char BOUNDARY_TEXT[] = "__MESSAGE__ID__1";
 const char* OUTPUT_PATH = "z:\\";
+#pragma message("[!!!]change the output_path in " __FILE__ "const char* OUTPUT_PATH");
 
-const char* username = "xxxxxx@211.com";
-const char* password = "xxxxx";
+const char* username = "";
+const char* password = "";
 
 void sendFormat(SOCKET server, const char* text, ...) {
-    char buffer[2048];
+    char buffer[BUFFER_SIZE];
     va_list args;
     va_start(args, text);
     vsprintf_s(buffer, sizeof(buffer), text, args);
@@ -57,28 +59,31 @@ int parseResponse(const char* response, int isNeed = 1) {
     return -1;
 }
 
-int waitOnResponse(SOCKET server, int expecting, char* out = NULL, int outSize = 0, int isNeed = 1) {
+int waitOnResponse(SOCKET server, int expecting, string* out = NULL, int isNeed = 1) {
     int buflen = MAXRESPONSE;
-    char* response = (char*)malloc(buflen);
-    char* p = response;
-    char* end = response + buflen;
+    string response;
+
+    response.reserve(buflen);
+    char* p = (char*)response.c_str();
+    char* end = p + buflen;
 
     int code = 0;
     int bytes_received;
 
     do {
-        bytes_received  = recv(server, p, buflen-1, 0);
+        bytes_received  = recv(server, response.data(), buflen-1, 0);
         if (bytes_received < 1) {
             fprintf(stderr, "Connection dropped.\n");
             exit(1);
         }
+
 
         p += bytes_received;
         *p = 0;
 
     } while (bytes_received < 1);
 
-    code = parseResponse(response, isNeed);
+    code = parseResponse(response.c_str(), isNeed);
     if (code != expecting) {
         fprintf(stderr, "Error from server:\n");
         fprintf(stderr, "%s", response);
@@ -87,38 +92,39 @@ int waitOnResponse(SOCKET server, int expecting, char* out = NULL, int outSize =
 
     
     if (out) {
-        strcpy_s(out, outSize, response);
+        out->append(response.c_str());
     }
-
-    free(response);
+    
     return bytes_received;
 }
 
 void addAttachment(const char* filename, SOCKET clientSocket) {
-    char SendBuf[BUFFER_SIZE] = { '\0' };
+    string file;
+    string sendBuf;
 
-    char szFileName[512] = { '\0' };
-    const char* attach = filename;
-    strcat_s(szFileName, "=?UTF-8?B?");
-    char* p1 = base64_encode((unsigned char*)attach, strlen(attach));
-    strcat_s(szFileName, p1);
-    strcat_s(szFileName, "?=");
+    sendBuf.reserve(BUFFER_SIZE);
+    file.reserve(BUFFER_SIZE);
+    char* p = base64_encode((unsigned char*)filename, strlen(filename));
+    file.append("=?UTF-8?B?");
+    file.append(p);
+    file.append("?=");
 
-    snprintf(SendBuf, BUFFER_SIZE, "--%s\r\n", BOUNDARY_TEXT);
-    strcat_s(SendBuf, "Content-Type: application/x-msdownload; name=\"");
-    strcat_s(SendBuf, szFileName);
-    strcat_s(SendBuf, "\"\r\n");
-    strcat_s(SendBuf, "Content-Transfer-Encoding: base64\r\n");
-    strcat_s(SendBuf, "Content-Disposition: attachment; filename=\"");
-    strcat_s(SendBuf, szFileName);
-    strcat_s(SendBuf, "\"\r\n");
-    strcat_s(SendBuf, "\r\n");
-    sendFormat(clientSocket, "%s", SendBuf);
+    sendBuf.append("--" BOUNDARY_TEXT DELM);
+    sendBuf.append("Content-Type: application/x-msdownload; name=\"");
+    sendBuf.append(file);
+    sendBuf.append("\"" DELM);
+    sendBuf.append("Content-Transfer-Encoding: base64" DELM);
+    sendBuf.append("Content-Disposition: attachment; filename=\"");
+    sendBuf.append(file);
+    sendBuf.append("\"" DELM);
+    sendBuf.append(DELM);
+    sendFormat(clientSocket, "%s", sendBuf.c_str());
+    sendBuf.clear();
 
-    int bb = 55;
+    const int bb =  1024;
     FILE* f;
-    unsigned char* fileBuf = (unsigned char*)malloc(bb);
-    fopen_s(&f, attach, "rb");
+    unsigned char fileBuf[bb];
+    fopen_s(&f, filename, "rb");
     unsigned int fileSize = 0;
     unsigned int res = 0;
     unsigned long part = 0;
@@ -128,24 +134,24 @@ void addAttachment(const char* filename, SOCKET clientSocket) {
         fileSize = ftell(f);
         fseek(f, 0, SEEK_SET);
     }
+
     for (int i = 0; i < fileSize / (bb - 1) + 1; i++) {
         res = fread(fileBuf, sizeof(char), (bb - 1), f);
         char* pb64 = base64_encode(fileBuf, res);
         if (part == 0) {
-            strcpy_s(SendBuf, pb64);
+            sendBuf.clear();
         }
-        else {
-            strcat_s(SendBuf, pb64);
-        }
-        strcat_s(SendBuf, "\r\n");
+        sendBuf.append(pb64);
+        sendBuf.append(DELM);
+
         part += res + 2;
         if (part >= BUFFER_SIZE / 2) {
             part = 0;
-            sendFormat(clientSocket, "%s", SendBuf);
+            sendFormat(clientSocket, "%s", sendBuf.c_str());
         }
     }
     if (part) {
-        sendFormat(clientSocket, "%s", SendBuf);
+        sendFormat(clientSocket, "%s", sendBuf.c_str());
     }
     fclose(f);
     f = NULL;
@@ -154,97 +160,89 @@ void addAttachment(const char* filename, SOCKET clientSocket) {
 void sendMail0(const char* hostname, const char* port, int isAttachment = 0, int isHTML = 0) {
     SOCKET clientSocket;
     addrinfo* peerAddr;
+    string sendBuf;
+    sendBuf.reserve(BUFFER_SIZE);
     setupClientSocket(hostname, port, clientSocket, &peerAddr);
     
     waitOnResponse(clientSocket, 220);
-    sendFormat(clientSocket, "HELO HONPWC\r\n");
+    sendFormat(clientSocket, "HELO HONPWC" DELM);
     waitOnResponse(clientSocket, 250);
 
     // auth
-    sendFormat(clientSocket, "AUTH LOGIN\r\n");
+    sendFormat(clientSocket, "AUTH LOGIN" DELM);
     waitOnResponse(clientSocket, 334);
 
-    const char* username = "xxx@xx.com";
-    const char* password = "xxxx@";
     char* p1 = base64_encode((unsigned char*)username, strlen(username));
     char* p2 = base64_encode((unsigned char*)password, strlen(password));
 
-    sendFormat(clientSocket, "%s\r\n", p1);
+    sendFormat(clientSocket, "%s" DELM, p1);
     waitOnResponse(clientSocket, 334);
-    sendFormat(clientSocket, "%s\r\n", p2);
+    sendFormat(clientSocket, "%s" DELM, p2);
     waitOnResponse(clientSocket, 235);
 
     // send info
     const char* sender = username;
-    sendFormat(clientSocket, "MAIL FROM:<%s>\r\n", sender);
+    sendFormat(clientSocket, "MAIL FROM:<%s>" DELM, sender);
     waitOnResponse(clientSocket, 250);
 
     // to,cc,bcc all in here
-    const char* recipient = "yyy@xx.com";
+    const char* recipient = username;
     // to
-    sendFormat(clientSocket, "RCPT TO:<%s>\r\n", recipient);
+    sendFormat(clientSocket, "RCPT TO:<%s>" DELM, recipient);
     waitOnResponse(clientSocket, 250);
-    /*
-    sendFormat(clientSocket, "RCPT TO:<%s>\r\n", recipient);
+    
+    sendFormat(clientSocket, "RCPT TO:<%s>" DELM, recipient);
     waitOnResponse(clientSocket, 250);
     // cc
-    sendFormat(clientSocket, "RCPT TO:<%s>\r\n", recipient);
+    sendFormat(clientSocket, "RCPT TO:<%s>" DELM, recipient);
     waitOnResponse(clientSocket, 250);
-    sendFormat(clientSocket, "RCPT TO:<%s>\r\n", recipient);
+    sendFormat(clientSocket, "RCPT TO:<%s>" DELM, recipient);
     waitOnResponse(clientSocket, 250);
     // bcc
-    sendFormat(clientSocket, "RCPT TO:<%s>\r\n", recipient);
+    sendFormat(clientSocket, "RCPT TO:<%s>" DELM, recipient);
     waitOnResponse(clientSocket, 250);
-    sendFormat(clientSocket, "RCPT TO:<%s>\r\n", recipient);
+    sendFormat(clientSocket, "RCPT TO:<%s>" DELM, recipient);
     waitOnResponse(clientSocket, 250);
-    */
 
-    sendFormat(clientSocket, "DATA\r\n");
+    sendFormat(clientSocket, "DATA" DELM);
     waitOnResponse(clientSocket, 354);
 
     // header
     const char* subject = "Test title";
-    sendFormat(clientSocket, "From:%s\r\n", "Tony Chen<1@1.com>");
-    sendFormat(clientSocket, "To:%s\r\n", "tony1<1@1.com>,tony2<1@1.com>");
+    sendFormat(clientSocket, "From:%s" DELM, "Tony Chen<1@1.com>");
+    sendFormat(clientSocket, "To:%s" DELM, "tony1<1@1.com>,tony2<1@1.com>");
     //sendFormat(clientSocket, "Cc:%s\r\n", "tony3<xx@xx.com>,tony4<xx@xx.com>");
     //sendFormat(clientSocket, "Bcc:%s\r\n", "tony5<xx@xx.com>,tony6<xx@xx.com>");
-    sendFormat(clientSocket, "Subject:%s\r\n", subject);
+    sendFormat(clientSocket, "Subject:%s" DELM, subject);
     const char* body = "<h1>Hi Tony:</h1>\n\n<div style=\"color:red\">Welcome to our pary.</div>\n<p>Have a good time.</p><p>Yours Sincerely,</p><p>Tom.</p>";
-    
-    char SendBuf[BUFFER_SIZE] = { '\0' };
-    
-    strcat_s(SendBuf, "MIME-Version: 1.0\r\n");
+   
+    sendBuf.append("MIME-Version: 1.0" DELM);
     if (isAttachment) {
-        strcat_s(SendBuf, "Content-Type: multipart/mixed; boundary=\"");
-        strcat_s(SendBuf, BOUNDARY_TEXT);
-        strcat_s(SendBuf, "\"\r\n");
-        strcat_s(SendBuf, "\r\n");
-        strcat_s(SendBuf, "--");
-        strcat_s(SendBuf, BOUNDARY_TEXT);
-        strcat_s(SendBuf, "\r\n");
+        sendBuf.append("Content-Type: multipart/mixed; boundary=\"" BOUNDARY_TEXT);
+        sendBuf.append("\"" DELM DELM "--" BOUNDARY_TEXT DELM);
     }
     if (isHTML)
-        strcat_s(SendBuf, "Content-type: text/html; charset=UTF-8\r\n");
+        sendBuf.append("Content-type: text/html; charset=UTF-8" DELM);
     else
-        strcat_s(SendBuf, "Content-type: text/plain; charset=UTF-8\r\n");
-    strcat_s(SendBuf, "Content-Transfer-Encoding: 8bit\r\n");
-    strcat_s(SendBuf, "\r\n");
-    sendFormat(clientSocket, "%s", SendBuf);
-    sendFormat(clientSocket, "%s\r\n", body);
+        sendBuf.append("Content-type: text/plain; charset=UTF-8" DELM);
+    sendBuf.append("Content-Transfer-Encoding: 8bit" DELM DELM);
+    sendFormat(clientSocket, "%s", sendBuf.c_str());
+    sendFormat(clientSocket, "%s" DELM, body);
+    sendBuf.clear();
 
     // 1.jpg, 08mailSend.cpp
     if (isAttachment) {
         addAttachment("1.jpg", clientSocket);
-        addAttachment("08mailSend.cpp", clientSocket);
+        addAttachment(__FILE__, clientSocket);
 
-        snprintf(SendBuf, BUFFER_SIZE, "\r\n--%s--\r\n", BOUNDARY_TEXT);
-        sendFormat(clientSocket, "%s", SendBuf);
+        sendBuf.append(DELM "--" BOUNDARY_TEXT "--" DELM);
+        sendFormat(clientSocket, "%s", sendBuf.c_str());
     }
 
     // !!! IMPORTANT, DO NOT FORGET send "."
-    sendFormat(clientSocket, "%s","\r\n.\r\n");
+    sendFormat(clientSocket, "%s", DELM "." DELM);
     waitOnResponse(clientSocket, 250);
-    sendFormat(clientSocket, "QUIT\r\n");
+    sendFormat(clientSocket, "QUIT" DELM);
     waitOnResponse(clientSocket, 221);
 }
 
@@ -264,21 +262,23 @@ void parseHeader(SOCKET clientSocket, string& buffer, int idx) {
     p1 += 4;
     strtok_s(p1, " ", &p2);
     p1 += p2 - p1;
-    strtok_s(p1, "\r\n", &p2);
+    strtok_s(p1, DELM, &p2);
     int size = strtol(p1, 0, 10);
     printf("Mail size is: %d\n", size);
 
-    sprintf_s(buffer.data(), buffer.capacity(), "retr %d\r\n", idx + 1);
+    sprintf_s(buffer.data(), buffer.capacity(), "retr %d" DELM, idx + 1);
     sendFormat(clientSocket, buffer.c_str());
-
-    waitOnResponse(clientSocket, 200, buffer.data(), MAXRESPONSE);
-    buffer.append(buffer.data());
+    buffer.clear();
+    
+    waitOnResponse(clientSocket, 200, &buffer);
     while (1) {
-        char* tmp = strstr(buffer.data(), "\r\n.\r\n");
-        if (!tmp) {
-            char tmpBuf[MAXRESPONSE];
-            waitOnResponse(clientSocket, -1, tmpBuf, MAXRESPONSE, 0);
-            buffer.append(tmpBuf);
+        const char* pend = DELM "." DELM;
+        int lpend = strlen(pend);
+        int ret = memcmp(buffer.data() + buffer.size() - lpend, pend, lpend);
+        if (ret) {
+            string tmpsb;
+            waitOnResponse(clientSocket, -1, &tmpsb, 0);
+            buffer.append(tmpsb);
         }
         else {
             break;
@@ -286,7 +286,7 @@ void parseHeader(SOCKET clientSocket, string& buffer, int idx) {
     }
 }
 
-int parseMetaInfo(char* buffer, std::stack<const char*>& stkBoundary2) {
+int parseMetaInfo(char* buffer, stack<const char*>& stkBoundary2) {
     char* p1;
     char* p2;
     char* p3;
@@ -295,15 +295,15 @@ int parseMetaInfo(char* buffer, std::stack<const char*>& stkBoundary2) {
     std::stack<const char*> stkBoundary1;
 
     p1 = buffer;
-    strtok_s(p1, "\r\n", &p2);
-    p1 = strtok_s(NULL, "\r\n", &p2);
+    strtok_s(p1, DELM, &p2);
+    p1 = strtok_s(NULL, DELM, &p2);
     p1 = strstr(p1, "Received: from");
     if (!p1) {
         exit(-1);
     }
 
     while (1) {
-        p1 = strtok_s(NULL, "\r\n", &p2);
+        p1 = strtok_s(NULL, DELM, &p2);
         if (!p1)
             break;
 
@@ -324,7 +324,7 @@ int parseMetaInfo(char* buffer, std::stack<const char*>& stkBoundary2) {
             contentType[strlen(contentType) - 1] = 0;
 
             if (strstr(contentType, "multipart")) {
-                p1 = strtok_s(NULL, "\r\n", &p2);
+                p1 = strtok_s(NULL, DELM, &p2);
                 p3 = strstr(p1, "boundary=\"");
                 if (p3) {
                     strtok_s(p3, "boundary=\"", &boundaryPart);
@@ -352,7 +352,7 @@ int parseMetaInfo(char* buffer, std::stack<const char*>& stkBoundary2) {
     return p1 - buffer;
 }
 
-int parseBody(char* buffer, std::stack<const char*>& stkBoundary2) {
+int parseBody(char* buffer, stack<const char*>& stkBoundary) {
     char* p1 = 0;
     char* p2;
     char* p3 = 0;
@@ -361,23 +361,82 @@ int parseBody(char* buffer, std::stack<const char*>& stkBoundary2) {
     rewindBuffer(buffer, p1, &p2);
 
     while (1) {
-        p1 = strtok_s(NULL, "\r\n", &p2);
-        if (stkBoundary2.size() > 0) {
-            p3 = strstr(p1, stkBoundary2.top());
+        p1 = strtok_s(NULL, DELM, &p2);
+        if (stkBoundary.size() > 0) {
+            p3 = strstr(p1, stkBoundary.top());
         }
         if (p3) {
             printf("body data:\n%s\n", bodyData.data());
-            stkBoundary2.pop();
+            stkBoundary.pop();
             p3 = 0;
             break;
         }
         else {
             bodyData.append(p1);
-            bodyData.append("\r\n");
+            bodyData.append(DELM);
         }
     }
 
     return p1 - buffer;
+}
+
+int writeAttachment(const char* filename, char* buffer, const char* encoding, const char* boundary) {
+    char* p1 = 0;
+    char* p2;
+    string fileData;
+    string outData;
+    int offset = 0;
+
+    rewindBuffer(buffer, p1, &p2);
+
+    while (1) {
+        p1 = strtok_s(NULL, DELM, &p2);
+        if (!p1)
+            break;
+        if (strstr(p1, boundary)) {
+            fileData.append("0");
+            FILE* f;
+            outData += OUTPUT_PATH;
+            outData += filename;
+
+            wchar_t* wstr = char2wchar(outData.c_str());
+            if (!wstr) {
+                break;
+            }
+
+            _wfopen_s(&f, wstr, L"wb+");
+            if (!f) {
+                break;
+            }
+            free(wstr);
+
+            outData.clear();
+            outData.reserve(fileData.size() * 2);
+            if (strcmp(encoding, "base64") == 0) {
+                int res = base64_decode((unsigned char*)outData.data(), (unsigned char*)fileData.data());
+                fwrite(outData.data(), 1, res - 1, f);
+            }
+            else {
+                if (fileData.size() > 1)
+                    fwrite(fileData.data(), 1, fileData.size(), f);
+            }
+
+            fclose(f);
+            fileData.clear();
+            fileData.resize(0);
+            offset = p1 - buffer;
+            break;
+        }
+
+        fileData.append(p1);
+        if (encoding) {
+            if (strcmp(encoding, "base64") != 0) {
+                fileData.append("\n");
+            }
+        }
+    }
+
+    return offset;
 }
 
 void parseAttachment(char* buffer, std::stack<const char*>& stkBoundary2) {
@@ -386,13 +445,49 @@ void parseAttachment(char* buffer, std::stack<const char*>& stkBoundary2) {
     char* p3;
     char* encoding = 0;
     char filename[MAX_PATH] = { 0 };
+    char decFilename[MAX_PATH] = { 0 };
     string fileData;
     string outData;
 
     rewindBuffer(buffer, p1, &p2);
 
+    // attachment in the body
     while (1) {
-        p1 = strtok_s(NULL, "\r\n", &p2);
+        p1 = strtok_s(NULL, DELM, &p2);
+        if (strstr(p1, stkBoundary2.top())) {
+            while (1) {
+                p1 = strtok_s(NULL, DELM, &p2);
+
+                if (p3 = strstr(p1, "name=")) {
+                    p3 += 6;
+                    p3[strlen(p3) - 1] = 0;
+                    strcpy_s(filename, sizeof(filename), p3);
+                    printf("attachment in body: %s\n", filename);
+
+                    p1 = strtok_s(NULL, DELM, &p2);
+                    if (p3 = strstr(p1, "Content-Transfer-Encoding")) {
+                        strtok_s(p1, " ", &encoding);
+                    }
+                    p1 = strtok_s(NULL, DELM, &p2);
+                    int offset = writeAttachment(filename, p1, encoding, stkBoundary2.top());
+                    p1 += offset;
+                    rewindBuffer(p1, p1, &p2);
+                    if (strstr(p1, stkBoundary2.top())) {
+                        stkBoundary2.pop();
+                        if (stkBoundary2.empty()) {
+                            stkBoundary2.push(p1);
+                            goto attachment;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+ attachment:
+    // attachment standalone
+    while (1) {
+        p1 = strtok_s(NULL, DELM, &p2);
         if (!p1)
             break;
 
@@ -405,38 +500,27 @@ void parseAttachment(char* buffer, std::stack<const char*>& stkBoundary2) {
             p3[strlen(p3) - 1] = 0;
             strcpy_s(filename, sizeof(filename), p3);
             
-            while (1) {
-                p1 = strtok_s(NULL, "\r\n", &p2);
-                if (!p1)
-                    break;
-                if (strstr(p1, stkBoundary2.top())) {
-                    FILE* f;
-                    outData += OUTPUT_PATH;
-                    outData += filename;
-                    fopen_s(&f, outData.data(), "wb+");
+            if (p3 = strstr(filename, "?B?")) {
+                string tmp;
+                tmp.assign(p3 + 3, strlen(p3) - 7);
+                base64_decode((unsigned char*)decFilename, (unsigned char*)tmp.c_str());
+                strcpy_s(filename, MAX_PATH, decFilename);
+                wchar_t* wstr = char2wchar(filename);
+                wprintf(L"attachment filename: %s\n", wstr);
+            }
+            else {
+                printf("attachment filename: %s\n", filename);
+            }
 
-                    outData.clear();
-                    outData.reserve(fileData.size() * 2);
-                    if (strcmp(encoding, "base64") == 0) {
-                        int res = base64_decode((unsigned char*)outData.data(), (unsigned char*)fileData.data());
-                        fwrite(outData.data(), 1, res, f);
-                    }
-                    else {
-                        fwrite(fileData.data(), 1, fileData.size(), f);
-                    }
-
-                    fclose(f);
-                    fileData.clear();
-                    fileData.resize(0);
-                    break;
-                }
-
-                fileData.append(p1);
-                if (encoding) {
-                    if (strcmp(encoding, "base64") != 0) {
-                        fileData.append("\n");
-                    }
-                }
+            int l = strlen(p1);
+            p1 += l;
+            *p1 = 0x1;
+            
+            int offset = writeAttachment(filename, p1, encoding, stkBoundary2.top());
+            p1 += offset;
+            rewindBuffer(p1, p1, &p2);
+            if (strstr(p1, stkBoundary2.top())) {
+                int a = 0;
             }
         }
     }
@@ -453,16 +537,14 @@ void parseMail(SOCKET clientSocket, string& buffer, int len, int i) {
     offset += parseMetaInfo(buffer.data(), stkBoundary);    
     offset += parseBody(buffer.data() + offset, stkBoundary);
     parseAttachment(buffer.data() + offset, stkBoundary);
-    int a = 0;
 }
 
 void recvMail0(const char* hostname, const char* port) {
     SOCKET clientSocket;
     addrinfo* peerAddr;
-    int buflen = MAXRESPONSE;
-    //char* buffer = (char*)malloc(buflen);
+    
     string buffer;
-    buffer.reserve(buflen);
+    buffer.reserve(MAXRESPONSE);
     char* p1 = (char*)buffer.c_str();
     char* p2;
     int count, i;
@@ -470,23 +552,25 @@ void recvMail0(const char* hostname, const char* port) {
     setupClientSocket(hostname, port, clientSocket, &peerAddr);
     waitOnResponse(clientSocket, 200);
     
-    sendFormat(clientSocket, "user %s\r\n", username);
-    waitOnResponse(clientSocket, 200, buffer.data(), buflen);
-    sendFormat(clientSocket, "pass %s\r\n", password);
-    waitOnResponse(clientSocket, 200, buffer.data(), buflen);
+    sendFormat(clientSocket, "user %s" DELM, username);
+    waitOnResponse(clientSocket, 200, &buffer);
+    sendFormat(clientSocket, "pass %s" DELM, password);
+    waitOnResponse(clientSocket, 200, &buffer);
     
     p1 += 4;
-    strtok_s(p1, " ", &p2);
+    strtok_s(p1, DELM, &p2);
+    p1 = strtok_s(NULL, DELM, &p2);
+    p1 += 4;
     count = strtol(p1, 0, 10);
     printf("Total %d emails.\n", count);
 
     for (i = 0; i < count; i++) {
         buffer.clear();
-        sprintf_s((char*)buffer.data(), buffer.capacity(), "list %d\r\n", i+1);
+        sprintf_s((char*)buffer.data(), buffer.capacity(), "list %d" DELM, i+1);
         sendFormat(clientSocket, buffer.c_str());
-        waitOnResponse(clientSocket, 200, buffer.data(), buflen);
+        waitOnResponse(clientSocket, 200, &buffer);
 
-        parseMail(clientSocket, buffer, buflen, i);
+        parseMail(clientSocket, buffer, MAXRESPONSE, i);
     }
 }
 

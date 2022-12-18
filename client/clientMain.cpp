@@ -12,7 +12,7 @@
 #define RUN_TEST5(x,desc,a,b,c,d,e) PRINT_DESC(x, desc); x(a,b,c,d,e); printf("\n")
 
 int main() {
-    setlocale(LC_ALL, "zh_CN.UTF-8");
+    setlocale(LC_ALL, "zh_TE.UTF-8");
 
     RUN_TEST0(testInitSocket);
     RUN_TEST0(testInterfaceAddr);

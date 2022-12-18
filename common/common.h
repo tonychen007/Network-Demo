@@ -32,6 +32,12 @@
 
 #define DESTORY_SOCK { WSACleanup(); }
 
+
+#define utf8_to_wchar_no_alloc(cp, src, wdest, wdest_size) \
+	MultiByteToWideChar(cp, 0, src, -1, wdest, wdest_size)
+
+wchar_t* char2wchar(const char* src);
+
 void getBindAddr(const char* port, struct addrinfo** bindAddr, int isUDP = 0);
 void getRemoteAddr(const char* hostname, const char* port, struct addrinfo** addr, int isUDP = 0);
 void parseUrl(const char* url, char** hostname, char** port, char** path);

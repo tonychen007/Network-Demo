@@ -1,5 +1,19 @@
 #include "common.h"
 
+
+wchar_t* char2wchar(const char* src) {
+	int cp = GetACP();
+	int size = MultiByteToWideChar(cp, 0, src, -1, NULL, 0);
+	wchar_t* wstr = (wchar_t*)malloc(size * sizeof(wchar_t));
+	if (utf8_to_wchar_no_alloc(cp, src, wstr, size) != size) {
+		printf("Error to convert string :%s\n", src);
+		wstr = NULL;
+	}
+
+	return wstr;
+}
+
+
 void getBindAddr(const char* port, struct addrinfo** bindAddr, int isUDP) {
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof(hints));

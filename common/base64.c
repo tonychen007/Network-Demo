@@ -177,7 +177,7 @@ int base64_decode(unsigned char* output, unsigned char* bytes_to_decode)
 			if (1 < j)
 				*ptr++ = (((tarray[1] & 0xf) << 4) | (tarray[2] >> 2));
 		}
-		*ptr++ = '\0';
+		//*ptr++ = '\0';
 		return(ptr - output);
 	}
 	return(0);
