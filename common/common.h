@@ -18,6 +18,11 @@
 #include <openssl/err.h>
 
 #include <libssh/libssh.h>
+#include <openssl/crypto.h>
+#include <openssl/x509.h>
+#include <openssl/pem.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 #define ISVALIDSOCKET(s) ((s) != INVALID_SOCKET)
 #define CLOSESOCKET(s) closesocket(s)
@@ -65,7 +70,8 @@ void testHttpServer();
 void testSendMail(const char* hostname, const char* port = "25");
 void testSendMailWithAttachment(const char* hostname, const char* port = "25");
 void testRecvMail(const char* hostname, const char* port = "110");
-
+void testSSLClient();
+void testSSLServer();
 void testNonBlocking(const char* hostname);
 void testServerIgnore();
 void testSendBigData();

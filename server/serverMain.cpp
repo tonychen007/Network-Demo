@@ -19,6 +19,7 @@ int main() {
     //RUN_TEST0(testSelectServer, 0);
     //RUN_TEST0(testUDPServer, 0);
     //RUN_TEST0(testHttpServer, 0);
-    RUN_TEST0(testServerIgnore, 0);
+    //RUN_TEST0(testServerIgnore, 0);
+    RUN_TEST0(testSSLServer, 0);
 }
 
