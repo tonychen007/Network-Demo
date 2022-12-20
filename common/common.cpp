@@ -92,19 +92,19 @@ void parseUrl(const char* url, char** hostname, char** port, char** path) {
 	printf("path: %s\n", *path);
 }
 
-void setupSocket(const char* hostname, const char* port, SOCKET& listenSocket, struct addrinfo** addr, int isUDP) {
+void setupSocket(const char* hostname, const char* port, SOCKET& peerSocket, struct addrinfo** addr, int isUDP) {
 	if (hostname == 0)
 		getBindAddr(port, addr, isUDP);
 	else
 		getRemoteAddr(hostname, port, addr, isUDP);
-	listenSocket = socket((*addr)->ai_family, (*addr)->ai_socktype, (*addr)->ai_protocol);
-	if (!ISVALIDSOCKET(listenSocket)) {
+	peerSocket = socket((*addr)->ai_family, (*addr)->ai_socktype, (*addr)->ai_protocol);
+	if (!ISVALIDSOCKET(peerSocket)) {
 		printf("Socket failed %d\n", GETSOCKETERRNO());
 		exit(-1);
 	}
 }
 
-void setupServerSocket(const char* port, SOCKET& listenSocket, int isUDP) {
+int setupServerSocket(const char* port, SOCKET& listenSocket, int isUDP, int nonBlock) {
 	int ret;
 	struct addrinfo* bindAddr = 0;
 
@@ -125,12 +125,20 @@ void setupServerSocket(const char* port, SOCKET& listenSocket, int isUDP) {
 			exit(-1);
 		}
 	}
+
+	return ret;
 }
 
-void setupClientSocket(const char* hostname, const char* port,SOCKET& clientSocket, struct addrinfo** peerAddr, int isUDP) {
+int setupClientSocket(const char* hostname, const char* port,SOCKET& clientSocket, struct addrinfo** peerAddr, int isUDP, int nonBlock) {
+	int ret;
 	setupSocket(hostname, port, clientSocket, peerAddr, isUDP);
 
 	clientSocket = socket((*peerAddr)->ai_family, (*peerAddr)->ai_socktype, (*peerAddr)->ai_protocol);
+
+	if (nonBlock) {
+		u_long nonBlock = 1;
+		ioctlsocket(clientSocket, FIONBIO, &nonBlock);
+	}
 
 	if (!ISVALIDSOCKET(clientSocket)) {
 		printf("socket() failed. (%d)\n", GETSOCKETERRNO());
@@ -139,13 +147,20 @@ void setupClientSocket(const char* hostname, const char* port,SOCKET& clientSock
 
 	if (!isUDP) {
 		printf("Connecting...\n");
-		if (connect(clientSocket, (*peerAddr)->ai_addr, (*peerAddr)->ai_addrlen)) {
-			printf("connect() failed. (%d)\n", GETSOCKETERRNO());
-			exit(-1);
+		if ((ret = connect(clientSocket, (*peerAddr)->ai_addr, (*peerAddr)->ai_addrlen))) {
+			if (nonBlock) {
+				if (GETSOCKETERRNO() != WSAEWOULDBLOCK) {
+					printf("connect() failed. (%d)\n", GETSOCKETERRNO());
+					exit(-1);
+				}
+			}
+			else {
+				printf("connect() failed. (%d)\n", GETSOCKETERRNO());
+				exit(-1);
+			}
 		}
 		printf("Connected.\n");
 	}
-	else {
 
-	}
+	return ret;
 }

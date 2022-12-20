@@ -146,9 +146,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\common\common.cpp" />
+    <ClCompile Include="02timeServer.cpp" />
     <ClCompile Include="03selectServer.cpp" />
     <ClCompile Include="04UDPServer.cpp" />
     <ClCompile Include="07httpServer.cpp" />
+    <ClCompile Include="13serverIgnore.cpp" />
     <ClCompile Include="serverMain.cpp" />
   </ItemGroup>
   <ItemGroup>

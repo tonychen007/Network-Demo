@@ -42,9 +42,9 @@ void getBindAddr(const char* port, struct addrinfo** bindAddr, int isUDP = 0);
 void getRemoteAddr(const char* hostname, const char* port, struct addrinfo** addr, int isUDP = 0);
 void parseUrl(const char* url, char** hostname, char** port, char** path);
 
-void setupSocket(const char* hostname, const char* port, SOCKET & listenSocket, struct addrinfo** addr, int isUDP = 0);
-void setupServerSocket(const char* port, SOCKET & listenSocket, int isUDP = 0);
-void setupClientSocket(const char* hostname, const char* port, SOCKET & clientSocket, struct addrinfo** peerAddr = 0, int isUDP = 0);
+void setupSocket(const char* hostname, const char* port, SOCKET & peerSocket, struct addrinfo** addr, int isUDP = 0);
+int setupServerSocket(const char* port, SOCKET & listenSocket, int isUDP = 0, int nonBlock = 0);
+int setupClientSocket(const char* hostname, const char* port, SOCKET & clientSocket, struct addrinfo** peerAddr = 0, int isUDP = 0, int nonBlock = 0);
 
 void timeServerLogic(const char* port, SOCKET& listenSocket, SOCKET& clientSocket, int isOnce = 1);
 void timeServerLogic0(SOCKET & listenSocket, SOCKET & clientSocket);
@@ -65,3 +65,7 @@ void testHttpServer();
 void testSendMail(const char* hostname, const char* port = "25");
 void testSendMailWithAttachment(const char* hostname, const char* port = "25");
 void testRecvMail(const char* hostname, const char* port = "110");
+
+void testNonBlocking(const char* hostname);
+void testServerIgnore();
+void testSendBigData();

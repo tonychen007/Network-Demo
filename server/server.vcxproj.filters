@@ -30,6 +30,12 @@
     <ClCompile Include="07httpServer.cpp">
       <Filter>來源檔案</Filter>
     </ClCompile>
+    <ClCompile Include="13serverIgnore.cpp">
+      <Filter>來源檔案</Filter>
+    </ClCompile>
+    <ClCompile Include="02timeServer.cpp">
+      <Filter>來源檔案</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\common.h">

@@ -151,12 +151,12 @@
   <ItemGroup>
     <ClCompile Include="..\common\base64.c" />
     <ClCompile Include="..\common\common.cpp" />
-    <ClCompile Include="02timeServer.cpp" />
     <ClCompile Include="03selectClient.cpp" />
     <ClCompile Include="04UDPClient.cpp" />
     <ClCompile Include="05queryDNS.cpp" />
     <ClCompile Include="06httpClient.cpp" />
     <ClCompile Include="08mailSendRecv.cpp" />
+    <ClCompile Include="13pitfalls.cpp" />
     <ClCompile Include="clientMain.cpp" />
     <ClCompile Include="01simpleWinsock.cpp" />
   </ItemGroup>
