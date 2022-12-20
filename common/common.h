@@ -72,6 +72,7 @@ void testSendMailWithAttachment(const char* hostname, const char* port = "25");
 void testRecvMail(const char* hostname, const char* port = "110");
 void testSSLClient();
 void testSSLServer();
+void testSSHClient();
 void testNonBlocking(const char* hostname);
 void testServerIgnore();
 void testSendBigData();

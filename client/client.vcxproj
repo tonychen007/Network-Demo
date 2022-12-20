@@ -124,10 +124,16 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>..\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>iphlpapi.lib;ws2_32.lib;Crypt32.lib;libssl64MTd.lib;libcrypto64MTd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>iphlpapi.lib;ws2_32.lib;Crypt32.lib;libssl64MTd.lib;libcrypto64MTd.lib;ssh.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <StackReserveSize>1342177280</StackReserveSize>
       <StackCommitSize>1342177280</StackCommitSize>
     </Link>
+    <PostBuildEvent>
+      <Command>copy "$(SolutionDir)dll\*.*" "$(SolutionDir)$(Platform)\$(Configuration)"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>copy dll</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -146,8 +152,14 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>..\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>iphlpapi.lib;ws2_32.lib;Crypt32.lib;libssl64MT.lib;libcrypto64MT.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>iphlpapi.lib;ws2_32.lib;Crypt32.lib;libssl64MT.lib;libcrypto64MT.lib;ssh.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy "$(SolutionDir)dll\*.*" "$(SolutionDir)$(Platform)\$(Configuration)</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>copy dll</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\common\base64.c" />
@@ -158,6 +170,7 @@
     <ClCompile Include="06httpClient.cpp" />
     <ClCompile Include="08mailSendRecv.cpp" />
     <ClCompile Include="09sslClient.cpp" />
+    <ClCompile Include="11sshClient.cpp" />
     <ClCompile Include="13pitfalls.cpp" />
     <ClCompile Include="clientMain.cpp" />
     <ClCompile Include="01simpleWinsock.cpp" />

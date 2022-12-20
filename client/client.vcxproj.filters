@@ -48,6 +48,9 @@
     <ClCompile Include="09sslClient.cpp">
       <Filter>來源檔案</Filter>
     </ClCompile>
+    <ClCompile Include="11sshClient.cpp">
+      <Filter>來源檔案</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\common.h">

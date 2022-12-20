@@ -99,8 +99,5 @@ void testSSLServer() {
 	setupServerSocket(port, listenSocket);
 	setupSSL(&ssl, ctx, hostname, listenSocket);
 
-	SSL_shutdown(ssl);
-	SSL_free(ssl);
-	SSL_CTX_free(ctx);
 	DESTORY_SOCK;
 }

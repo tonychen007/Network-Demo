@@ -150,7 +150,7 @@
     <ClCompile Include="03selectServer.cpp" />
     <ClCompile Include="04UDPServer.cpp" />
     <ClCompile Include="07httpServer.cpp" />
-    <ClCompile Include="09sslServer.cpp" />
+    <ClCompile Include="10sslServer.cpp" />
     <ClCompile Include="13serverIgnore.cpp" />
     <ClCompile Include="serverMain.cpp" />
   </ItemGroup>
