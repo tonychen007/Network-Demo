@@ -26,5 +26,6 @@ int main() {
     //RUN_TEST1(testNonBlocking, "www.baidu.com", 0);
     //RUN_TEST0(testSendBigData, 0);
     //RUN_TEST0(testSSLClient, 0);
-    RUN_TEST0(testSSHClient, 0);
+    //RUN_TEST0(testSSHClient, 0);
+    RUN_TEST0(testSSHDownload, 0);
 }

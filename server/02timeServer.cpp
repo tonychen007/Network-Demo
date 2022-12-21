@@ -1,5 +1,7 @@
 #include "../common/common.h"
 
+void timeServerLogic0(SOCKET& listenSocket, SOCKET& clientSocket);
+
 void timeServerLogic(const char* port, SOCKET& listenSocket, SOCKET& clientSocket, int isOnce) {
 
 	if (!isOnce) {

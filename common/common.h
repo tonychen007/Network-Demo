@@ -50,12 +50,7 @@ void parseUrl(const char* url, char** hostname, char** port, char** path);
 void setupSocket(const char* hostname, const char* port, SOCKET & peerSocket, struct addrinfo** addr, int isUDP = 0);
 int setupServerSocket(const char* port, SOCKET & listenSocket, int isUDP = 0, int nonBlock = 0);
 int setupClientSocket(const char* hostname, const char* port, SOCKET & clientSocket, struct addrinfo** peerAddr = 0, int isUDP = 0, int nonBlock = 0);
-
-void timeServerLogic(const char* port, SOCKET& listenSocket, SOCKET& clientSocket, int isOnce = 1);
-void timeServerLogic0(SOCKET & listenSocket, SOCKET & clientSocket);
-void selectClient(const char* port, SOCKET & clientSocket);
-void selectServer(const char* port, SOCKET & listenSocket, SOCKET & clientSocket);
-
+void connectSSH(ssh_session & ssh, const char* hostname, int port, const char* user);
 
 void testInitSocket();
 void testInterfaceAddr();
@@ -73,6 +68,7 @@ void testRecvMail(const char* hostname, const char* port = "110");
 void testSSLClient();
 void testSSLServer();
 void testSSHClient();
+void testSSHDownload();
 void testNonBlocking(const char* hostname);
 void testServerIgnore();
 void testSendBigData();

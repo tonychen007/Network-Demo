@@ -171,6 +171,7 @@
     <ClCompile Include="08mailSendRecv.cpp" />
     <ClCompile Include="09sslClient.cpp" />
     <ClCompile Include="11sshClient.cpp" />
+    <ClCompile Include="11sshDownload.cpp" />
     <ClCompile Include="13pitfalls.cpp" />
     <ClCompile Include="clientMain.cpp" />
     <ClCompile Include="01simpleWinsock.cpp" />
